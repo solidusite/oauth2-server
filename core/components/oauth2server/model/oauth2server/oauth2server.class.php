@@ -6,7 +6,7 @@
  *
  * @author @sepiariver <yj@modx.com>
  * Copyright 2015 by YJ Tso
- * 
+ *
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation; either version 2 of the License, or (at your option) any later
@@ -21,7 +21,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 59 Temple
  * Place, Suite 330, Boston, MA 02111-1307 USA
  **/
- 
+
 class OAuth2Server
 {
     public $modx = null;
@@ -38,7 +38,7 @@ class OAuth2Server
         $assetsPath = $this->getOption('assets_path', $options, $this->modx->getOption('assets_path', null, MODX_ASSETS_PATH) . 'components/oauth2server/');
         $assetsUrl = $this->getOption('assets_url', $options, $this->modx->getOption('assets_url', null, MODX_ASSETS_URL) . 'components/oauth2server/');
         $dbPrefix = $this->getOption('table_prefix', $options, $this->modx->getOption('table_prefix', null, 'modx_'));
-        
+
         /* load config defaults */
         $this->options = array_merge(array(
             'namespace' => $this->namespace,
@@ -73,7 +73,7 @@ class OAuth2Server
             ),
 
         ), $options);
-        
+
         /* load table names for OAuth2 PDO driver */
         $this->tablenames = array(
             'client_table' => $dbPrefix . 'oauth2server_clients',
@@ -83,14 +83,16 @@ class OAuth2Server
             'jwt_table'  => $dbPrefix . 'oauth2server_jwt',
             'scope_table'  => $dbPrefix . 'oauth2server_scopes',
         );
-        
+
         $this->modx->addPackage('oauth2server', $this->options['modelPath'], $this->modx->config['table_prefix']);
         $this->modx->lexicon->load('oauth2server:default');
-        
+
         // Load OAuth2
         require_once($this->options['oauth2Path'] . 'Autoloader.php');
         OAuth2\Autoloader::register();
-               
+
+        require_once('oauth2serveruserstorage.class.php');
+
     }
 
     /**
@@ -99,32 +101,41 @@ class OAuth2Server
      */
     public function createServer()
     {
-    
+
         // Init storage
         $storage = new OAuth2\Storage\Pdo($this->modx->config['connections'][0], $this->tablenames);
         if (!$storage instanceof OAuth2\Storage\Pdo) {
-            
+
             $this->modx->log(modX::LOG_LEVEL_ERROR, '[OAuth2Server] could not load a valid storage class!');
             return null;
-            
+
         }
+
+        // Init user storage
+        $userstorage = new OAuth2ServerUserStorage($this->modx);
+        if(!$userstorage instanceof OAuth2ServerUserStorage) {
+            $this->modx->log(modX::LOG_LEVEL_ERROR, '[OAuth2Server] could not load a valid user storage class!');
+            return null;
+        }
+
         // Init server
         $server = new OAuth2\Server($storage, $this->options['server']);
-        
+
         if (!$server instanceof OAuth2\Server) {
-            
+
             $this->modx->log(modX::LOG_LEVEL_ERROR, '[OAuth2Server] could not load a valid server class!');
             return null;
-            
+
         }
 
         // Supported Grant Types
         $server->addGrantType(new OAuth2\GrantType\AuthorizationCode($storage, $this->options['server']));
         $server->addGrantType(new OAuth2\GrantType\RefreshToken($storage, $this->options['server']));
         $server->addGrantType(new OAuth2\GrantType\ClientCredentials($storage, $this->options['server']));
-        
+        $server->addGrantType(new OAuth2\GrantType\UserCredentials($userstorage, $this->options['server']));
+
         return $server;
-        
+
     }
 
     /**
@@ -132,35 +143,35 @@ class OAuth2Server
      *
      */
     public function createRequest() {
-        
+
         $request = OAuth2\Request::createFromGlobals();
         if ((!$request instanceof OAuth2\Request)) {
-            
+
             $this->modx->log(modX::LOG_LEVEL_ERROR, '[OAuth2Server] could not create a valid request object!');
             return null;
-            
+
         }
         return $request;
-        
-    } 
-    
+
+    }
+
     /**
      * Create an OAuth2 Response Object
      *
      */
     public function createResponse() {
-        
+
         $response = new OAuth2\Response();
         if ((!$response instanceof OAuth2\Response)) {
-            
+
             $this->modx->log(modX::LOG_LEVEL_ERROR, '[OAuth2Server] could not create a valid response object!');
             return null;
-            
+
         }
         return $response;
-        
-    } 
-    
+
+    }
+
     /**
      * Send unauthorized without redirect, and exit.
      *
@@ -174,8 +185,8 @@ class OAuth2Server
             exit(0);
         }
     }
-    
-     
+
+
     /* UTILITY METHODS (@theboxer) */
     /**
      * Get a local configuration option or a namespaced system setting by key.
@@ -217,10 +228,10 @@ class OAuth2Server
             /** @var \modChunk $chunk */
             $chunk = $this->modx->newObject('modChunk', array('name' => 'inline-' . uniqid()));
             $chunk->setCacheable(false);
-            
+
             return $chunk->process($phs, $content);
         }
-        
+
         return $this->modx->getChunk($tpl, $phs);
     }
 }

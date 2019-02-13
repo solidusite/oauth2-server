@@ -1,17 +1,17 @@
 <?php
 /**
  * authorizeOAuth2
- * 
+ *
  * OAuth2 Authorization endpoint for MODX
- * Filters requests on the User's MODX User Group Membership, 
+ * Filters requests on the User's MODX User Group Membership,
  * but also exposes the Manager URL for login! Recommended:
- * call this snippet in a Login snippet logoutTpl to implement 
+ * call this snippet in a Login snippet logoutTpl to implement
  * custom login page.
  *
  * @package OAuth2Server
  * @author @sepiariver <yj@modx.com>
  * Copyright 2015 by YJ Tso
- * 
+ *
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation; either version 2 of the License, or (at your option) any later
@@ -27,15 +27,20 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA
  **/
 
-// Check User TODO: best way to handle manager login without exposing manager_url?
-if (!$modx->user) {
-    $modx->sendRedirect($modx->getOption('manager_url'));
-} 
-if  (!$modx->user->isMember('Administrator')) return 'Only Administrators can authorize OAuth2 requests.';
+/**
+ * @param int $userauth Set to 1 if using UserCredential grant type.
+ */
+if(!$userauth){
+    // Check User TODO: best way to handle manager login without exposing manager_url?
+    if (!$modx->user) {
+        $modx->sendRedirect($modx->getOption('manager_url'));
+    }
+    if  (!$modx->user->isMember('Administrator')) return 'Only Administrators can authorize OAuth2 requests.';
 
-// Options
-$authTpl = $modx->getOption('authTpl', $scriptProperties, 'oauth2server_auth_tpl');
-$authKey = $modx->getOption('authKey', $scriptProperties, 'authorize');
+    // Options
+    $authTpl = $modx->getOption('authTpl', $scriptProperties, 'oauth2server_auth_tpl');
+    $authKey = $modx->getOption('authKey', $scriptProperties, 'authorize');
+}
 
 // Paths
 $oauth2Path = $modx->getOption('oauth2server.core_path', null, $modx->getOption('core_path') . 'components/oauth2server/');
@@ -63,11 +68,12 @@ if (!$server->validateAuthorizeRequest($request, $response)) {
 
 // Display an authorization form
 $post = modX::sanitize($_POST, $modx->sanitizePatterns);
-if (empty($post)) {
+
+if (empty($post) && !$userauth) {
     return $modx->getChunk($authTpl, array('auth_key' => $authKey));
 }
 
 // Redirect to stored redirect_uri for this client, if authorized
-$is_authorized = ($post[$authKey] === 'yes');
+$is_authorized = $userauth ? true : ($post[$authKey] === 'yes');
 $server->handleAuthorizeRequest($request, $response, $is_authorized);
 $response->send();

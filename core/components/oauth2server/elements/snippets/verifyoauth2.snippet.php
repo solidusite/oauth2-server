@@ -1,14 +1,14 @@
 <?php
 /**
  * verifyOAuth2
- * 
+ *
  * Verifies an OAuth2 request in MODX
- * 
+ *
  * OPTIONS:
- * redirectUnauthorized -   (int) Sends unauthorized response, preventing anything below this Snippet 
+ * redirectUnauthorized -   (int) Sends unauthorized response, preventing anything below this Snippet
  *                          in the Resource/Template from being processed. If disabled, exit() WILL NOT
- *                          be called!. Return values can be customized in the properties below. Default 1 
- * redirectTo -             (string) Accepts either 'error' or 'unauthorized'. Both methods call exit(). 
+ *                          be called!. Return values can be customized in the properties below. Default 1
+ * redirectTo -             (string) Accepts either 'error' or 'unauthorized'. Both methods call exit().
  *                          Default 'unauthorized'
  * returnOnUnauthorized -   (mixed) Specify a return value if request is unauthorized. Default 0
  * returnOnSuccess -        (mixed) Specify a return value if request is successfully verified. Default 1
@@ -16,7 +16,7 @@
  * @package OAuth2Server
  * @author @sepiariver <yj@modx.com>
  * Copyright 2015 by YJ Tso
- * 
+ *
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation; either version 2 of the License, or (at your option) any later
@@ -70,5 +70,9 @@ if (!$verified) {
         return $returnOnUnauthorized;
     }
 } else {
+    //set the current user from the verified access token
+    $token = $server->getAccessTokenData($request);
+    if(!empty($token['user_id'])) $modx->user = $modx->getObject('modUser',$token['user_id']);
+
     return $returnOnSuccess;
 }

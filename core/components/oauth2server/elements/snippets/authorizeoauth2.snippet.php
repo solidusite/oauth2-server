@@ -27,12 +27,22 @@
  * Place, Suite 330, Boston, MA 02111-1307 USA
  **/
 
-// Check User TODO: best way to handle manager login without exposing manager_url?
-if (!$modx->user) {
-    $modx->sendRedirect($modx->getOption('manager_url'));
-} 
-if  (!$modx->user->isMember('Administrator')) return 'Only Administrators can authorize OAuth2 requests.';
-
+if (!$modx->user->isAuthenticated('web')) {
+    // Prepare login chunk
+    $inp = $modx->getService('inp','Inp',$modx->getOption('inp.core_path',null,$modx->getOption('core_path').'components/inp/').'model/inp/',$scriptProperties);
+    if (!($inp instanceof Inp)) return 'failed to load class Inp';
+    $ctx = $modx->getObject('modContext',array('key'=>'web'));
+    if ($ctx) {
+        $site_url = $ctx->getOption('site_url', null, 'default');
+    }
+    $actual_link = $site_url.$_SERVER["REQUEST_URI"];
+    
+    echo $inp->getChunk('login',array(
+        'source_url'=>$actual_link
+    ));
+    return;
+}
+//if  (!$modx->user->isMember('Administrator')) return 'Only Administrators can authorize OAuth2 requests.';
 // Options
 $authTpl = $modx->getOption('authTpl', $scriptProperties, 'oauth2server_auth_tpl');
 $authKey = $modx->getOption('authKey', $scriptProperties, 'authorize');
@@ -69,5 +79,5 @@ if (empty($post)) {
 
 // Redirect to stored redirect_uri for this client, if authorized
 $is_authorized = ($post[$authKey] === 'yes');
-$server->handleAuthorizeRequest($request, $response, $is_authorized);
+$server->handleAuthorizeRequest($request, $response, $is_authorized,$modx->user->id);
 $response->send();

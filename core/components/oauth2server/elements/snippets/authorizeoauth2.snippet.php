@@ -41,6 +41,20 @@ if (!$modx->user->isAuthenticated('web')) {
         'source_url'=>$actual_link
     ));
     return;
+}else if(!$_GET['act']){
+    // Prepare choose user chunk
+    $inp = $modx->getService('inp','Inp',$modx->getOption('inp.core_path',null,$modx->getOption('core_path').'components/inp/').'model/inp/',$scriptProperties);
+    if (!($inp instanceof Inp)) return 'failed to load class Inp';
+    $ctx = $modx->getObject('modContext',array('key'=>'web'));
+    if ($ctx) {
+        $site_url = $ctx->getOption('site_url', null, 'default');
+    }
+    $actual_link = $site_url.$_SERVER["REQUEST_URI"];
+
+    echo $inp->getChunk('choose_user',array(
+        'source_url'=>$actual_link
+    ));
+    return;
 }
 //if  (!$modx->user->isMember('Administrator')) return 'Only Administrators can authorize OAuth2 requests.';
 // Options

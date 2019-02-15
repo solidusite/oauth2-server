@@ -70,7 +70,16 @@ if (!$server || !$request || !$response) {
 if (!$server->validateAuthorizeRequest($request, $response)) {
     return 'The authorization request was invalid.';
 }
-
+// Check if user already get an access
+$obj = $modx->getObject('OAuth2ServerAccessTokens',array(
+    'user_id'=>$modx->user->id,
+    'client_id'=>$_REQUEST['client_id']
+));
+if($obj){
+    // Redirect to stored redirect_uri for this client
+    $server->handleAuthorizeRequest($request, $response, true,$modx->user->id);
+    $response->send();
+}
 // Display an authorization form
 $post = modX::sanitize($_POST, $modx->sanitizePatterns);
 if (empty($post)) {

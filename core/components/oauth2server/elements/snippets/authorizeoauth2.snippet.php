@@ -26,7 +26,13 @@
  * this program; if not, write to the Free Software Foundation, Inc., 59 Temple
  * Place, Suite 330, Boston, MA 02111-1307 USA
  **/
-
+/**
+ * Modalità di utilizzo:
+ * Default:
+ * - Se loggato, viene presentato il modulo di scelta account
+ * - Se non loggato, viene mostrato il modulo di login
+ *
+ */
 if (!$modx->user->isAuthenticated('web')) {
     // Prepare login chunk
     $inp = $modx->getService('inp','Inp',$modx->getOption('inp.core_path',null,$modx->getOption('core_path').'components/inp/').'model/inp/',$scriptProperties);
@@ -41,7 +47,7 @@ if (!$modx->user->isAuthenticated('web')) {
         'source_url'=>$actual_link
     ));
     return;
-}else if(!$_GET['act']){
+}else if(empty($_GET['act'])){
     // Prepare choose user chunk
     $inp = $modx->getService('inp','Inp',$modx->getOption('inp.core_path',null,$modx->getOption('core_path').'components/inp/').'model/inp/',$scriptProperties);
     if (!($inp instanceof Inp)) return 'failed to load class Inp';
@@ -54,6 +60,16 @@ if (!$modx->user->isAuthenticated('web')) {
     echo $inp->getChunk('choose_user',array(
         'source_url'=>$actual_link
     ));
+    return;
+}else if($_GET['act'] == "logout"){
+    $modx->runProcessor('security/logout');
+    $ctx = $modx->getObject('modContext',array('key'=>'web'));
+    if ($ctx) {
+        $site_url = $ctx->getOption('site_url', null, 'default');
+    }
+    // remove act=logout
+    $url = str_replace('&act=logout','',$site_url.$_SERVER["REQUEST_URI"]);
+    $modx->sendRedirect($url);
     return;
 }
 //if  (!$modx->user->isMember('Administrator')) return 'Only Administrators can authorize OAuth2 requests.';
@@ -84,6 +100,10 @@ if (!$server || !$request || !$response) {
 if (!$server->validateAuthorizeRequest($request, $response)) {
     return 'The authorization request was invalid.';
 }
+/**
+ * Se esiste già un access token non chiedo nuovamente i permessi,
+ * rinnovo automaticamente l'accesso
+ */
 // Check if user already get an access
 $obj = $modx->getObject('OAuth2ServerAccessTokens',array(
     'user_id'=>$modx->user->id,
